@@ -124,11 +124,10 @@ else:
             [history[curr_month - 2].iloc[0], predicted_prev, predicted_curr])
     ax.set_xticks(ticks=all_months.date_block_num)
     ax.set_xticklabels(all_month_names, rotation=80)
+    ax.legend(['real sales over the all months', 'predicted values for current and previous months'])
     st.pyplot(fig)
     st.markdown(
-f'''- The blue line is the plot of real sales over the all months.
-- The orange line is the plot of predicted values for current and previous months.
-- The absolute error of prediction for previous month is {round(abs(predicted_prev - history[curr_month - 1].iloc[0]), 5)}''')
+f'''The absolute error of prediction for previous month is {round(abs(predicted_prev - history[curr_month - 1].iloc[0]), 5)}''')
 
 # 2, 1905
 # 59, 20949
