@@ -30,15 +30,15 @@ def MA(ser, window):
                      (sum(y[k:-(window - 1 - k)] for k in range(window - 1)) + y[window - 1:]) / window)
 
 # Here the function for extracting the time series using days, weeks or months.
-def time_series(df, store_id=None, time_range='day', agg_func='sum', all_values=None):
+def time_series(df, store_id=None, time_range='day', agg_func='sum', all_values=None, target_name='target'):
     time_col = f'ordered_{time_range}'
     if all_values is None:
         all_values = df[time_col].unique()
         all_values.sort()
     all_values = pd.DataFrame({time_col: all_values})
     mask = [True] * len(df) if store_id is None else df.Store == store_id
-    return df.loc[mask, [time_col, 'target']].groupby(time_col).agg({'target': agg_func}).reset_index()\
-        .merge(all_values, on=time_col, how='right').fillna(0).set_index(time_col).target
+    return df.loc[mask, [time_col, target_name]].groupby(time_col).agg({target_name: agg_func}).reset_index()\
+        .merge(all_values, on=time_col, how='right').fillna(0).set_index(time_col)[target_name]
 
 #####################################################
 #
@@ -147,8 +147,8 @@ def sales_title(time_range, agg_func):
     return f'{sales_type} {time_range_ly} sales '
     
 # Plot the time series
-def plot_time_series(df, store_id=None, time_range='month', agg_func='sum', all_values=None, title=None, figsize=(10, 6)):
-    ser = time_series(df, store_id, time_range, agg_func, all_values)
+def plot_time_series(df, store_id=None, time_range='month', agg_func='sum', all_values=None, title=None, figsize=(10, 6), target_name='target'):
+    ser = time_series(df, store_id, time_range, agg_func, all_values, target_name)
     plt.figure(figsize=figsize)
     
     if title is None:
@@ -160,7 +160,7 @@ def plot_time_series(df, store_id=None, time_range='month', agg_func='sum', all_
     plt.plot(ser.index, ser)
     
 # Plot the time series groupped by the category
-def plot_time_series_of_cat(df, cat, time_range='month', agg_func='sum', all_values=None, weighted=True, title=None, figsize=(10, 6)):
+def plot_time_series_of_cat(df, cat, time_range='month', agg_func='sum', all_values=None, weighted=True, title=None, figsize=(10, 6), target_name='target'):
     df_copy = pd.DataFrame({cat: df[cat]})
     df_copy[cat + 'count'] = 0
     cat_count = df_copy.groupby(cat).agg({cat + 'count': 'count'})
@@ -170,7 +170,7 @@ def plot_time_series_of_cat(df, cat, time_range='month', agg_func='sum', all_val
         all_values = df[f'ordered_{time_range}'].unique()
     
     if weighted:
-        sers = [time_series(df[df[cat] == cat_value], time_range=time_range, agg_func=agg_func, all_values=all_values) / cat_count.loc[cat_value, cat + 'count']
+        sers = [time_series(df[df[cat] == cat_value], time_range=time_range, agg_func=agg_func, all_values=all_values, target_name=target_name) / cat_count.loc[cat_value, cat + 'count']
             for cat_value in cat_values]
     else:
         sers = [time_series(df[df[cat] == cat_value], time_range=time_range, agg_func=agg_func, all_values=all_values)
@@ -191,15 +191,15 @@ def plot_time_series_of_cat(df, cat, time_range='month', agg_func='sum', all_val
     plt.show()
 
 # Plot the time series groupped by the category that was encoded earlier using one-hot encoder
-def plot_time_series_of_encoded_cat(df, cat, new_cats, old_values, time_range='month', agg_func='sum', all_values=None, weighted=True, title=None, figsize=(10, 6)):
+def plot_time_series_of_encoded_cat(df, cat, new_cats, old_values, time_range='month', agg_func='sum', all_values=None, weighted=True, title=None, figsize=(10, 6), target_name='target'):
     cat_target_df = pd.DataFrame(
         {cat: df[new_cats].idxmax(1).replace(to_replace=new_cats, value=old_values),
-         'target': df.target,
+         target_name: df[target_name],
         f'ordered_{time_range}': df[f'ordered_{time_range}']})
-    plot_time_series_of_cat(cat_target_df, cat, time_range, agg_func, all_values, weighted, title, figsize)
+    plot_time_series_of_cat(cat_target_df, cat, time_range, agg_func, all_values, weighted, title, figsize, target_name)
 
 # The same plot using the way of naming the encoded features
-def my_plot_time_series_of_encoded_cat(df, cat, time_range='month', agg_func='sum', all_values=None, weighted=True, title=None, figsize=(10, 6)):
+def my_plot_time_series_of_encoded_cat(df, cat, time_range='month', agg_func='sum', all_values=None, weighted=True, title=None, figsize=(10, 6), target_name='target'):
     new_cats = df.columns[df.columns.str.startswith(cat)]
     old_values = new_cats.str.replace(cat + '_', '')
-    plot_time_series_of_encoded_cat(df, cat, new_cats, old_values, time_range, agg_func, all_values, weighted, title, figsize)
+    plot_time_series_of_encoded_cat(df, cat, new_cats, old_values, time_range, agg_func, all_values, weighted, title, figsize, target_name)
